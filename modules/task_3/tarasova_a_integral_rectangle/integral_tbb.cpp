@@ -3,96 +3,71 @@
 #include <vector>
 #include "../../../modules/task_3/tarasova_a_integral_rectangle/integral_tbb.h"
 
-class CalculationXY {
- private:
-    double my_h;
-    double my_a;
-    std::vector<double>* my_x1;
- public:
-    void operator()(const tbb::blocked_range<size_t>& r) const {
-        for (size_t i = r.begin(); i < r.end(); i++)
-            (*my_x1)[i] = my_a + i * my_h + my_h / 2;
-    }
-    CalculationXY(const double& h, const double& a, std::vector<double>* x1) {
-        my_h = h;
-        my_a = a;
-        my_x1 = x1;
-    }
-};
-
-class Sum {
- private:
-    std::vector<double> my_x;
-    std::vector<double> my_y;
-    std::vector<double> my_z;
-    double my_a;
+class Integral {
+private:
+    double h;
+    double a1, a2, a3;
+    double n1, n2, n3;
     double res;
-    double my_h;
-    double (*my_f)(double, double, double);
- public:
-    void operator()(const tbb::blocked_range3d<size_t>& r) {
-        for (size_t i = r.pages().begin(); i < r.pages().end(); i++) {
-            for (size_t j = r.rows().begin(); j<r.rows().end(); j++)
-               for (size_t k = r.cols().begin(); k<r.cols().end(); k++)
-                 res+=my_f(my_x[i], my_y[j], my_z[k]) * my_h * my_h * my_h
-        }
+    const std::function<double(double, double, double)>& fun;
+
+public:
+    explicit Integral(double h, double n1, double n2, double n3, double a1, double a2, double a3,
+        const std::function<double(double, double, double)>& _fun) :
+        h(h), n1(n1), n2(n2), n3(n3), a1(a1), a2(a2), a3(a3), res(0), fun(_fun) {}
+
+    Integral(const trFunctor& f, tbb::split) :
+        h(f.h), n1(f.n1), n2(f.n2), n3(f.n3), a1(f.a1), a2(f.a2), a3(f.a3), res(0), fun(f.fun) {}
+
+    void operator()(const tbb::blocked_range3d<int>& r) {
+        int i = r.pages().begin(), i_end = r.pages().end();
+        int j = r.rows().begin(), j_end = r.rows().end();
+        int k = r.cols().begin(), k_end = r.cols().end();
+
+        for (i = r.pages().begin(); i < i_end; i++)
+            for (j = r.rows().begin(); j < j_end; j++)
+                for (k = r.cols().begin(); k < k_end; k++) {
+
+                    const double x = a1 + i * h + h / 2;
+                    const double y = a2 + j * h + h / 2;
+                    const double z = a3 + k * h + h / 2;
+                    res += h * h * h * fun(x, y, z);
+                }
     }
-    Sum(const double& x, const double& y, const double& a, const double& h, double f(double, double, double)) {
-        my_x = x;
-        my_y = y;
-        my_a = a;
-        my_h = h;
-        my_f = (*f);
+
+    void join(const trFunctor& f) {
+        res += f.res;
     }
-    Sum(const Sum& s, tbb::split): my_x(s.my_x), my_y(s.my_y), my_z(s.my_z), my_a(s.my_a), my_h(f.my_h), my_f(s.my_f) {}
-    void join(const Sum& s) {
-      res += s.res;
-}
+
     double result() {
-return res;
-}
+        return res;
+    }
 };
-
-
-double getParallel(const double& a1, const double& a2, const double& a3, const double& b1,
-    const double& b2, const double& b3, const double& h, double f(double, double, double)) {
-    double sum = 0.0, x, y, z;
-    int n1, n2, n3;
-    n1 = static_cast<int>((b1 - a1) / h);
-    n2 = static_cast<int>((b2 - a2) / h);
-    n3 = static_cast<int>((b3 - a3) / h);
-    std::vector<double> x1(n1), y1(n2), z1(n3);
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, n1), CalculationXY(h, a1, &x1));
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, n2), CalculationXY(h, a2, &y1));
-    Sum s(x1, y1, z1, a3, h, f)
-    tbb::parallel_reduce(tbb::blocked_range3d<size_t>(0, n1, 0, n2, 0, n3), s);
-    sum = s.result();
-    return sum;
+double getParallel(double a1, double b1, double a2, double b2, double a3,
+    double b3, double h, const std::function<double(double, double, double)>& fun) {
+    int n1 = (int)((b1 - a1) / h);
+    int n2 = (int)((b2 - a2) / h);
+    int n3 = (int)((b3 - a3) / h);
+    trFunctor ftr(h, n1, n2, n3, a1, a2, a3, fun);
+    tbb::parallel_reduce(tbb::blocked_range3d<int>(0, n1, 0, n2, 0, n3), ftr);
+    return ftr.result();
 }
 
-double getSequential(const double& a1, const double& a2, const double& a3, const double& b1,
-    const double& b2, const double& b3, const double& h, double f(double, double, double)) {
-    double sum = 0.0, x, y, z;
-    int n1, n2, n3;
-    n1 = static_cast<int>((b1 - a1) / h);
-    n2 = static_cast<int>((b2 - a2) / h);
-    n3 = static_cast<int>((b3 - a3) / h);
-    std::vector<double> x1(n1), y1(n2), z1(n3);
-    for (int i = 0; i < n1; i++) {
-        x = a1 + i * h + h / 2;
-        x1[i] = x;
-    }
-    for (int i = 0; i < n2; i++) {
-        y = a2 + i * h + h / 2;
-        y1[i] = y;
-    }
-    for (int i = 0; i < n3; i++) {
-        z = a3 + i * h + h / 2;
-        z1[i] = z;
-    }
-    for (int i = 0; i < n1; i++)
-        for (int j = 0; j < n2; j++)
-            for (int k = 0; k < n3; k++)
-                sum += f(x1[i], y1[j], z1[k]) * h * h * h;
+double getSequential(double a1, double b1, double a2, double b2, double a3,
+    double b3, double h, const std::function<double(double, double, double)>& fun)
+{
+    int i, j, k, n1, n2, n3;
+    double sum = 0;
+    n1 = (int)((b1 - a1) / h);
+    n2 = (int)((b2 - a2) / h);
+    n3 = (int)((b3 - a3) / h);
+    for (i = 0; i < n1; i++)
+        for (j = 0; j < n2; j++)
+            for (k = 0; k < n3; k++) {
+                const double x = a1 + i * h + h / 2;
+                const double y = a2 + j * h + h / 2;
+                const double z = a3 + k * h + h / 2;
+                sum += h * h * h * fun(x1, x2, x3);
+            }
     return sum;
 }

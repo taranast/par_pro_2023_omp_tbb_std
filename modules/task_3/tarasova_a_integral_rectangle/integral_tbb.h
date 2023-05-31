@@ -4,9 +4,9 @@
 
 #include <vector>
 
-double getParallel(const double& a1, const double& a2, const double& a3,
-    const double& b1, const double& b2, const double& b3, const double& h, double f(double, double, double));
-double getSequential(const double& a1, const double& a2, const double& a3,
-    const double& b1, const double& b2, const double& b3, const double& h, double f(double, double, double));
+double getParallel(double a1, double b1, double a2, double b2, double a3,
+	double b3, double h, const std::function<double(double, double, double)>& fun);
+double getSequential(double a1, double b1, double a2, double b2, double a3,
+	double b3, double h, const std::function<double(double, double, double)>& fun);
 
 #endif  // MODULES_TASK_3_TARASOVA_A_INTEGRAL_RECTANGLE_INTEGRAL_TBB_H_
