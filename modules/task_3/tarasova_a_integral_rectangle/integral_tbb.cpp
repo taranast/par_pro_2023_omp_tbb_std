@@ -16,8 +16,8 @@ class Integral {
         const std::function<double(double, double, double)>& _fun) :
         h(h), n1(n1), n2(n2), n3(n3), a1(a1), a2(a2), a3(a3), res(0), fun(_fun) {}
 
-    Integral(const trFunctor& f, tbb::split) :
-        h(f.h), n1(f.n1), n2(f.n2), n3(f.n3), a1(f.a1), a2(f.a2), a3(f.a3), res(0), fun(f.fun) {}
+    Integral(const Integral& i, tbb::split) :
+        h(i.h), n1(i.n1), n2(i.n2), n3(i.n3), a1(i.a1), a2(i.a2), a3(i.a3), res(0), fun(i.fun) {}
 
     void operator()(const tbb::blocked_range3d<int>& r) {
         int i = r.pages().begin(), i_end = r.pages().end();
@@ -34,8 +34,8 @@ class Integral {
                 }
     }
 
-    void join(const trFunctor& f) {
-        res += f.res;
+    void join(const Integral& i) {
+        res += i.res;
     }
 
     double result() {
@@ -47,9 +47,9 @@ double getParallel(double a1, double b1, double a2, double b2, double a3,
     int n1 = static_cast<int>((b1 - a1) / h);
     int n2 = static_cast<int>((b2 - a2) / h);
     int n3 = static_cast<int>((b3 - a3) / h);
-    trFunctor ftr(h, n1, n2, n3, a1, a2, a3, fun);
-    tbb::parallel_reduce(tbb::blocked_range3d<int>(0, n1, 0, n2, 0, n3), ftr);
-    return ftr.result();
+    Integral integral(h, n1, n2, n3, a1, a2, a3, fun);
+    tbb::parallel_reduce(tbb::blocked_range3d<int>(0, n1, 0, n2, 0, n3), integral);
+    return integral.result();
 }
 
 double getSequential(double a1, double b1, double a2, double b2, double a3,
@@ -65,7 +65,7 @@ double getSequential(double a1, double b1, double a2, double b2, double a3,
                 const double x = a1 + i * h + h / 2;
                 const double y = a2 + j * h + h / 2;
                 const double z = a3 + k * h + h / 2;
-                sum += h * h * h * fun(x1, x2, x3);
+                sum += h * h * h * fun(x, y, z);
             }
     return sum;
 }
