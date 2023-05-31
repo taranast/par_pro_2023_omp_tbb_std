@@ -4,14 +4,14 @@
 #include "../../../modules/task_3/tarasova_a_integral_rectangle/integral_tbb.h"
 
 class Integral {
-private:
+ private:
     double h;
     double a1, a2, a3;
     double n1, n2, n3;
     double res;
     const std::function<double(double, double, double)>& fun;
 
-public:
+ public:
     explicit Integral(double h, double n1, double n2, double n3, double a1, double a2, double a3,
         const std::function<double(double, double, double)>& _fun) :
         h(h), n1(n1), n2(n2), n3(n3), a1(a1), a2(a2), a3(a3), res(0), fun(_fun) {}
@@ -27,7 +27,6 @@ public:
         for (i = r.pages().begin(); i < i_end; i++)
             for (j = r.rows().begin(); j < j_end; j++)
                 for (k = r.cols().begin(); k < k_end; k++) {
-
                     const double x = a1 + i * h + h / 2;
                     const double y = a2 + j * h + h / 2;
                     const double z = a3 + k * h + h / 2;
@@ -45,22 +44,21 @@ public:
 };
 double getParallel(double a1, double b1, double a2, double b2, double a3,
     double b3, double h, const std::function<double(double, double, double)>& fun) {
-    int n1 = (int)((b1 - a1) / h);
-    int n2 = (int)((b2 - a2) / h);
-    int n3 = (int)((b3 - a3) / h);
+    int n1 = static_cast<int>((b1 - a1) / h);
+    int n2 = static_cast<int>((b2 - a2) / h);
+    int n3 = static_cast<int>((b3 - a3) / h);
     trFunctor ftr(h, n1, n2, n3, a1, a2, a3, fun);
     tbb::parallel_reduce(tbb::blocked_range3d<int>(0, n1, 0, n2, 0, n3), ftr);
     return ftr.result();
 }
 
 double getSequential(double a1, double b1, double a2, double b2, double a3,
-    double b3, double h, const std::function<double(double, double, double)>& fun)
-{
+    double b3, double h, const std::function<double(double, double, double)>& fun) {
     int i, j, k, n1, n2, n3;
     double sum = 0;
-    n1 = (int)((b1 - a1) / h);
-    n2 = (int)((b2 - a2) / h);
-    n3 = (int)((b3 - a3) / h);
+    n1 = static_cast<int>((b1 - a1) / h);
+    n2 = static_cast<int>((b2 - a2) / h);
+    n3 = static_cast<int>((b3 - a3) / h);
     for (i = 0; i < n1; i++)
         for (j = 0; j < n2; j++)
             for (k = 0; k < n3; k++) {
